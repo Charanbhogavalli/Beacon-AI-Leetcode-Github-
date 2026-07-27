@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Beacon AI",
+  "version": "1.0",
+
+  "description": "AI companion for GitHub and LeetCode.",
+
+  "permissions": [
+    "storage"
+  ],
+
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*"
+  ],
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://github.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ]
+    }
+  ]
+}
