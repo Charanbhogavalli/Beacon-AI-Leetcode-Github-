@@ -1,0 +1,25 @@
+{
+  "name": "beacon-ai",
+  "version": "1.0.0",
+  "description": "AI coding companion Chrome extension for GitHub and LeetCode powered by Google Gemini",
+  "type": "module",
+  "scripts": {
+    "build": "node server/node_modules/esbuild/bin/esbuild src/index.js --bundle --outfile=content.js --format=iife",
+    "watch": "node server/node_modules/esbuild/bin/esbuild src/index.js --bundle --outfile=content.js --format=iife --watch",
+    "server": "npm --prefix server start",
+    "server:dev": "npm --prefix server run dev",
+    "test": "npm --prefix server test"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  },
+  "keywords": [
+    "beacon",
+    "chrome-extension",
+    "gemini",
+    "github",
+    "leetcode"
+  ],
+  "author": "Beacon AI",
+  "license": "MIT"
+}
