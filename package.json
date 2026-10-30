@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node server/node_modules/esbuild/bin/esbuild src/index.js --bundle --outfile=content.js --format=iife",
     "watch": "node server/node_modules/esbuild/bin/esbuild src/index.js --bundle --outfile=content.js --format=iife --watch",
+    "package": "npm run build && powershell -Command \"$ProgressPreference = 'SilentlyContinue'; Compress-Archive -Path manifest.json, background.js, content.js, content.css, icons, src -DestinationPath beacon-ai.zip -Force\"",
     "server": "npm --prefix server start",
     "server:dev": "npm --prefix server run dev",
     "test": "npm --prefix server test"

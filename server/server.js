@@ -4,14 +4,19 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
-import { generateWithFallback, isConfigured, SUPPORTED_MODELS } from './gemini.js';
+import {
+  generateContent,
+  isConfigured,
+  getActiveProvider,
+  getSupportedModels,
+  getDefaultModel
+} from './provider.js';
 import { buildPrompt } from './prompts.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const PREFERRED_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 // Security Headers
 app.use(helmet({
@@ -46,21 +51,25 @@ app.use('/api/', apiLimiter);
 // ----------------------------------------------------------------------------
 
 app.get('/api/health', (req, res) => {
-  const configured = isConfigured();
+  const provider = getActiveProvider();
+  const configured = isConfigured(provider);
   res.json({
     status: 'ok',
     service: 'Beacon AI Server',
+    provider,
     configured,
-    activeModel: PREFERRED_MODEL,
-    supportedModels: SUPPORTED_MODELS,
+    activeModel: getDefaultModel(provider),
+    supportedModels: getSupportedModels(provider),
     timestamp: new Date().toISOString()
   });
 });
 
 app.get('/api/models', (req, res) => {
+  const provider = getActiveProvider();
   res.json({
-    models: SUPPORTED_MODELS,
-    default: PREFERRED_MODEL
+    provider,
+    models: getSupportedModels(provider),
+    default: getDefaultModel(provider)
   });
 });
 
@@ -100,8 +109,8 @@ app.post('/api/action', async (req, res) => {
       options: options || {}
     });
 
-    const preferredModel = options?.model || PREFERRED_MODEL;
-    const result = await generateWithFallback({
+    const preferredModel = options?.model || getDefaultModel();
+    const result = await generateContent({
       prompt,
       systemInstruction,
       preferredModel,
@@ -160,8 +169,8 @@ app.post('/api/chat', async (req, res) => {
       history: safeHistory
     });
 
-    const preferredModel = options?.model || PREFERRED_MODEL;
-    const result = await generateWithFallback({
+    const preferredModel = options?.model || getDefaultModel();
+    const result = await generateContent({
       prompt,
       systemInstruction,
       preferredModel,
@@ -205,10 +214,12 @@ const isMainModule = process.argv[1] && (
 
 if (isMainModule && process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
+    const provider = getActiveProvider();
     console.log(`\n=================================================`);
     console.log(`🟢 Beacon AI Server running on http://localhost:${PORT}`);
-    console.log(`🔑 Gemini Configured: ${isConfigured() ? 'YES' : 'NO (Add GEMINI_API_KEY to server/.env)'}`);
-    console.log(`🤖 Active Model: ${PREFERRED_MODEL}`);
+    console.log(`⚡ AI Provider: ${provider.toUpperCase()}`);
+    console.log(`🔑 Configured: ${isConfigured(provider) ? 'YES' : 'NO (Check API key in server/.env)'}`);
+    console.log(`🤖 Active Model: ${getDefaultModel(provider)}`);
     console.log(`=================================================\n`);
   });
 }

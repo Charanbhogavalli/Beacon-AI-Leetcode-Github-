@@ -3,7 +3,9 @@
  */
 import http from 'http';
 import { app } from '../server.js';
-import { isConfigured } from '../gemini.js';
+import { isConfigured, getActiveProvider } from '../provider.js';
+import { formatOpenAIError, isOpenAIConfigured } from '../openai.js';
+import { formatGeminiError } from '../gemini.js';
 import { buildPrompt } from '../prompts.js';
 
 async function runTests() {
@@ -46,7 +48,23 @@ async function runTests() {
     failed++;
   }
 
-  // Test 2: HTTP Integration Tests
+  // Test 2: Error Formatter Unit Tests
+  console.log('\n--- Unit Tests: Error Formatters ---');
+  try {
+    const geminiErr = formatGeminiError(new Error('API_KEY_INVALID'));
+    assert(geminiErr.includes('Invalid Gemini API key'), 'formatGeminiError handles API_KEY_INVALID');
+
+    const openAiAuthErr = formatOpenAIError(new Error('401 Incorrect API key'));
+    assert(openAiAuthErr.includes('Invalid OpenAI API key'), 'formatOpenAIError handles 401 Incorrect API key');
+
+    const openAiQuotaErr = formatOpenAIError(new Error('429 insufficient_quota'));
+    assert(openAiQuotaErr.includes('quota exceeded'), 'formatOpenAIError handles 429 quota error');
+  } catch (err) {
+    console.error('Error formatter test failed with error:', err);
+    failed++;
+  }
+
+  // Test 3: HTTP Integration Tests
   console.log('\n--- Integration Tests: Server Endpoints ---');
 
   // Start in-process test server on an ephemeral port
@@ -96,6 +114,7 @@ async function runTests() {
     const health = await makeRequest('/api/health');
     assert(health.status === 200, 'GET /api/health returns 200 status');
     assert(health.body.status === 'ok', 'Health status is ok');
+    assert(typeof health.body.provider === 'string', 'Provider field present in health check');
     assert(Array.isArray(health.body.supportedModels), 'Supported models array present in health check');
 
     // Models check
@@ -109,12 +128,13 @@ async function runTests() {
     const badChat = await makeRequest('/api/chat', 'POST', {});
     assert(badChat.status === 400, 'POST /api/chat returns 400 on empty body');
 
-    // Config status
-    const configured = isConfigured();
-    console.log(`\n  ℹ️ Gemini API Key configured in server: ${configured}`);
+    // Config status & Provider verification
+    const activeProvider = getActiveProvider();
+    const configured = isConfigured(activeProvider);
+    console.log(`\n  ℹ️ Active Provider: ${activeProvider.toUpperCase()} (Configured: ${configured})`);
 
     if (configured) {
-      console.log('\n--- Live Gemini API Integration Test ---');
+      console.log(`\n--- Live ${activeProvider.toUpperCase()} API Integration Test ---`);
       const testAction = await makeRequest('/api/action', 'POST', {
         action: 'leetcode_explain',
         context: {
@@ -124,11 +144,11 @@ async function runTests() {
           description: 'Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.'
         }
       });
-      assert(testAction.status === 200, 'Live Gemini action returned 200');
+      assert(testAction.status === 200, `Live ${activeProvider} action returned 200`);
       assert(testAction.body.success === true && typeof testAction.body.text === 'string', 'Live action returned generated text');
       console.log(`     Model used: ${testAction.body.modelUsed}`);
     } else {
-      console.log('  ⚠️ Skipping live Gemini call because GEMINI_API_KEY is not yet populated.');
+      console.log(`  ℹ️ Provider '${activeProvider}' is not yet populated with a live key. Testing 503 error handling...`);
       const testAction = await makeRequest('/api/action', 'POST', {
         action: 'leetcode_explain',
         context: { platform: 'leetcode', title: 'Two Sum' }

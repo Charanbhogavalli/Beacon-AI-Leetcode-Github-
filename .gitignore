@@ -14,5 +14,6 @@ yarn-error.log*
 # Build outputs & OS files
 dist/
 build/
+*.zip
 .DS_Store
 Thumbs.db

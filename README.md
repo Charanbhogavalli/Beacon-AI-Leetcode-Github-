@@ -1,6 +1,6 @@
 # 🟢 Beacon AI — Contextual AI Coding Companion
 
-> **Beacon AI** is an intelligent, developer-first Chrome extension companion for **GitHub** and **LeetCode**, powered by **Google Gemini** via the official `@google/genai` SDK.
+> **Beacon AI** is an intelligent, developer-first Chrome extension companion for **GitHub** and **LeetCode**, powered by **OpenAI** (`gpt-4o-mini`, `gpt-4o`, `o3-mini`) and **Google Gemini** (`gemini-2.5-flash`).
 
 ---
 
@@ -61,40 +61,43 @@
 
 ## 🚀 Quickstart
 
-### 1. Configure and Start the Backend Server
+### Method A: Direct Mode (Instant — No Server Required) ⚡
 
-```bash
-# Navigate to server directory
-cd server
-
-# Install dependencies (if not already done)
-npm install
-
-# Configure your Gemini API Key
-cp .env.example .env
-# Edit .env and paste your GEMINI_API_KEY:
-# GEMINI_API_KEY=AIzaSy...
-
-# Start the server
-npm start
-```
-
-The server will run on `http://localhost:3001`.
-- Health check: `http://localhost:3001/api/health`
-- Supported models: `http://localhost:3001/api/models`
-
-> **Note:** If `GEMINI_API_KEY` is not yet configured, the server starts normally and the extension will display a clear setup prompt rather than crashing.
+1. Open Google Chrome and navigate to `chrome://extensions/`.
+2. Enable **Developer mode** (toggle in the top-right corner).
+3. Click **Load unpacked** and select this folder (or download `beacon-ai.zip` from Releases and unzip).
+4. Navigate to any [GitHub Issue / PR](https://github.com) or [LeetCode Problem](https://leetcode.com/problems/two-sum/).
+5. Click the floating **🟢 Beacon** launcher at the bottom-right or press **`Alt+B`**.
+6. Click the ⚙️ **Settings** icon:
+   - Select **Connection Mode: Direct Browser Mode**.
+   - Paste your **Google Gemini API Key** (Free from [Google AI Studio](https://aistudio.google.com/app/apikey)) or **OpenAI API Key**.
+   - Click **Save Settings** (or click **Test Connection** to verify).
+7. That's it! Beacon AI is immediately ready to analyze code, generate hints, and assist you.
 
 ---
 
-### 2. Load the Chrome Extension
+### Method B: Self-Hosted Server Mode (Optional) 🖥️
 
-1. Open Google Chrome and navigate to `chrome://extensions/`.
-2. Enable **Developer mode** (toggle in top right corner).
-3. Click **Load unpacked**.
-4. Select the project root folder (`c:\coding\becon`).
-5. Open any [GitHub issue/PR](https://github.com) or [LeetCode problem](https://leetcode.com/problems/two-sum/)!
-6. Click the floating **🟢 Beacon** launcher at the bottom right or press **`Alt+B`**.
+If you prefer proxying requests through your own local Node.js service:
+
+```bash
+# 1. Navigate to server directory
+cd server
+
+# 2. Install dependencies
+npm install
+
+# 3. Configure your API Key
+cp .env.example .env
+# Edit .env and set your key:
+# AI_PROVIDER=gemini
+# GEMINI_API_KEY=AIzaSy...
+
+# 4. Start the server
+npm start
+```
+
+The server runs on `http://localhost:3001`. In the extension Settings, switch Connection Mode to **Backend Server**.
 
 ---
 

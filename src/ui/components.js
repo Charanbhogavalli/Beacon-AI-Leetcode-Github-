@@ -29,6 +29,10 @@ export class BeaconUI {
     this.backendStatus = 'connecting'; // 'online' | 'offline' | 'unconfigured' | 'connecting'
 
     this.settings = {
+      connectionMode: 'direct', // 'direct' | 'server'
+      provider: 'gemini',       // 'gemini' | 'openai'
+      geminiApiKey: '',
+      openaiApiKey: '',
       backendUrl: 'http://localhost:3001',
       preferredLanguage: 'python',
       model: 'gemini-2.5-flash'
@@ -184,10 +188,18 @@ export class BeaconUI {
     pill.className = `beacon-status-indicator ${this.backendStatus}`;
     const text = pill.querySelector('.status-text');
     if (text) {
-      if (this.backendStatus === 'online') text.innerText = 'Gemini Ready';
-      else if (this.backendStatus === 'unconfigured') text.innerText = 'Key Missing';
-      else if (this.backendStatus === 'connecting') text.innerText = 'Connecting';
-      else text.innerText = 'Backend Offline';
+      const mode = this.settings.connectionMode || 'direct';
+      const prov = (this.settings.provider || 'gemini') === 'openai' ? 'OpenAI' : 'Gemini';
+
+      if (this.backendStatus === 'online') {
+        text.innerText = mode === 'direct' ? `${prov} Ready` : 'Server Ready';
+      } else if (this.backendStatus === 'unconfigured') {
+        text.innerText = 'Key Missing';
+      } else if (this.backendStatus === 'connecting') {
+        text.innerText = 'Connecting...';
+      } else {
+        text.innerText = mode === 'direct' ? 'API Offline' : 'Server Offline';
+      }
     }
   }
 
@@ -574,9 +586,68 @@ export class BeaconUI {
   }
 
   renderSettingsTab() {
+    const isDirect = (this.settings.connectionMode || 'direct') === 'direct';
+    const provider = this.settings.provider || 'gemini';
+    const isGemini = provider === 'gemini';
+
     return `
       <div class="beacon-settings-form">
         <div class="beacon-form-group">
+          <label class="beacon-form-label">Connection Mode</label>
+          <select class="beacon-form-select" id="setting-connection-mode">
+            <option value="direct" ${isDirect ? 'selected' : ''}>Direct Browser Mode (No Server Needed)</option>
+            <option value="server" ${!isDirect ? 'selected' : ''}>Backend Server (Local or Remote)</option>
+          </select>
+          <span style="font-size:11px; color:#8b949e;">
+            ${isDirect ? '⚡ Calls AI API directly from Chrome using your API key.' : '🖥️ Connects to a Node.js / Express backend service.'}
+          </span>
+        </div>
+
+        <div class="beacon-form-group">
+          <label class="beacon-form-label">AI Provider</label>
+          <select class="beacon-form-select" id="setting-provider">
+            <option value="gemini" ${isGemini ? 'selected' : ''}>Google Gemini (Recommended - Free Tier)</option>
+            <option value="openai" ${!isGemini ? 'selected' : ''}>OpenAI (GPT-4o, o3-mini)</option>
+          </select>
+        </div>
+
+        <div class="beacon-form-group" id="group-gemini-key" style="${isGemini ? 'display:flex;' : 'display:none;'}">
+          <label class="beacon-form-label">Google Gemini API Key</label>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input
+              type="password"
+              class="beacon-form-input"
+              id="setting-gemini-key"
+              value="${this.settings.geminiApiKey || ''}"
+              placeholder="AIzaSy..."
+              style="width:100%; padding-right:36px; box-sizing:border-box;"
+            />
+            <button type="button" class="beacon-toggle-pwd" id="toggle-gemini-key" style="position:absolute; right:8px; background:none; border:none; color:#8b949e; cursor:pointer; font-size:14px; padding:0;">👁️</button>
+          </div>
+          <span style="font-size:11px; color:#8b949e;">
+            Get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style="color:#10b981; text-decoration:underline;">Google AI Studio</a> (no card required).
+          </span>
+        </div>
+
+        <div class="beacon-form-group" id="group-openai-key" style="${!isGemini ? 'display:flex;' : 'display:none;'}">
+          <label class="beacon-form-label">OpenAI API Key</label>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input
+              type="password"
+              class="beacon-form-input"
+              id="setting-openai-key"
+              value="${this.settings.openaiApiKey || ''}"
+              placeholder="sk-..."
+              style="width:100%; padding-right:36px; box-sizing:border-box;"
+            />
+            <button type="button" class="beacon-toggle-pwd" id="toggle-openai-key" style="position:absolute; right:8px; background:none; border:none; color:#8b949e; cursor:pointer; font-size:14px; padding:0;">👁️</button>
+          </div>
+          <span style="font-size:11px; color:#8b949e;">
+            Get an API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" style="color:#10b981; text-decoration:underline;">OpenAI Platform</a>.
+          </span>
+        </div>
+
+        <div class="beacon-form-group" id="group-backend-url" style="${!isDirect ? 'display:flex;' : 'display:none;'}">
           <label class="beacon-form-label">Backend Server URL</label>
           <input
             type="text"
@@ -585,7 +656,7 @@ export class BeaconUI {
             value="${this.settings.backendUrl || 'http://localhost:3001'}"
             placeholder="http://localhost:3001"
           />
-          <span style="font-size:11px; color:#8b949e;">Local Node.js backend handling Google Gemini requests.</span>
+          <span style="font-size:11px; color:#8b949e;">Local Node.js backend handling AI requests.</span>
         </div>
 
         <div class="beacon-form-group">
@@ -602,18 +673,24 @@ export class BeaconUI {
         </div>
 
         <div class="beacon-form-group">
-          <label class="beacon-form-label">Gemini Model</label>
+          <label class="beacon-form-label">AI Model</label>
           <select class="beacon-form-select" id="setting-model">
-            <option value="gemini-2.5-flash" ${this.settings.model === 'gemini-2.5-flash' ? 'selected' : ''}>gemini-2.5-flash (Fast & Intelligent)</option>
-            <option value="gemini-2.0-flash" ${this.settings.model === 'gemini-2.0-flash' ? 'selected' : ''}>gemini-2.0-flash (Fallback)</option>
-            <option value="gemini-1.5-flash" ${this.settings.model === 'gemini-1.5-flash' ? 'selected' : ''}>gemini-1.5-flash</option>
-            <option value="gemini-1.5-pro" ${this.settings.model === 'gemini-1.5-pro' ? 'selected' : ''}>gemini-1.5-pro (Deep Reasoning)</option>
+            ${isGemini ? `
+              <option value="gemini-2.5-flash" ${this.settings.model === 'gemini-2.5-flash' ? 'selected' : ''}>gemini-2.5-flash (Fast & Intelligent - Recommended)</option>
+              <option value="gemini-2.0-flash" ${this.settings.model === 'gemini-2.0-flash' ? 'selected' : ''}>gemini-2.0-flash (Low Latency)</option>
+              <option value="gemini-1.5-flash" ${this.settings.model === 'gemini-1.5-flash' ? 'selected' : ''}>gemini-1.5-flash</option>
+              <option value="gemini-1.5-pro" ${this.settings.model === 'gemini-1.5-pro' ? 'selected' : ''}>gemini-1.5-pro (Deep Reasoning)</option>
+            ` : `
+              <option value="gpt-4o-mini" ${this.settings.model === 'gpt-4o-mini' ? 'selected' : ''}>gpt-4o-mini (Fast & Efficient - Recommended)</option>
+              <option value="gpt-4o" ${this.settings.model === 'gpt-4o' ? 'selected' : ''}>gpt-4o (High Intelligence)</option>
+              <option value="o3-mini" ${this.settings.model === 'o3-mini' ? 'selected' : ''}>o3-mini (Advanced Reasoning)</option>
+            `}
           </select>
         </div>
 
         <div style="display:flex; gap:8px;">
           <button class="beacon-save-btn" id="btn-save-settings" style="flex:1;">Save Settings</button>
-          <button class="beacon-retry-btn" id="btn-test-connection" style="padding: 8px 12px; margin:0;">Test Backend</button>
+          <button class="beacon-retry-btn" id="btn-test-connection" style="padding: 8px 12px; margin:0;">Test Connection</button>
         </div>
       </div>
     `;
@@ -736,9 +813,101 @@ export class BeaconUI {
       this.onCheckHealth();
     });
 
+    // Dynamic provider switch
+    root.querySelector('#setting-provider')?.addEventListener('change', (e) => {
+      const prov = e.target.value;
+      const geminiGroup = root.querySelector('#group-gemini-key');
+      const openaiGroup = root.querySelector('#group-openai-key');
+      const modelSelect = root.querySelector('#setting-model');
+
+      if (prov === 'gemini') {
+        if (geminiGroup) geminiGroup.style.display = 'flex';
+        if (openaiGroup) openaiGroup.style.display = 'none';
+        if (modelSelect) {
+          modelSelect.innerHTML = `
+            <option value="gemini-2.5-flash" selected>gemini-2.5-flash (Fast & Intelligent - Recommended)</option>
+            <option value="gemini-2.0-flash">gemini-2.0-flash (Low Latency)</option>
+            <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+            <option value="gemini-1.5-pro">gemini-1.5-pro (Deep Reasoning)</option>
+          `;
+        }
+      } else {
+        if (geminiGroup) geminiGroup.style.display = 'none';
+        if (openaiGroup) openaiGroup.style.display = 'flex';
+        if (modelSelect) {
+          modelSelect.innerHTML = `
+            <option value="gpt-4o-mini" selected>gpt-4o-mini (Fast & Efficient - Recommended)</option>
+            <option value="gpt-4o">gpt-4o (High Intelligence)</option>
+            <option value="o3-mini">o3-mini (Advanced Reasoning)</option>
+          `;
+        }
+      }
+    });
+
+    // Dynamic connection mode switch
+    root.querySelector('#setting-connection-mode')?.addEventListener('change', (e) => {
+      const mode = e.target.value;
+      const backendUrlGroup = root.querySelector('#group-backend-url');
+      if (backendUrlGroup) {
+        backendUrlGroup.style.display = mode === 'server' ? 'flex' : 'none';
+      }
+    });
+
+    // Toggle API Key password visibility
+    root.querySelector('#toggle-gemini-key')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const input = root.querySelector('#setting-gemini-key');
+      if (input) input.type = input.type === 'password' ? 'text' : 'password';
+    });
+
+    root.querySelector('#toggle-openai-key')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const input = root.querySelector('#setting-openai-key');
+      if (input) input.type = input.type === 'password' ? 'text' : 'password';
+    });
+
+    // Test Connection
     root.querySelector('#btn-test-connection')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.onCheckHealth();
+      const testBtn = root.querySelector('#btn-test-connection');
+      if (testBtn) testBtn.innerText = 'Testing...';
+
+      const connectionMode = root.querySelector('#setting-connection-mode')?.value || 'direct';
+      const provider = root.querySelector('#setting-provider')?.value || 'gemini';
+      const geminiApiKey = root.querySelector('#setting-gemini-key')?.value?.trim() || '';
+      const openaiApiKey = root.querySelector('#setting-openai-key')?.value?.trim() || '';
+      const backendUrl = root.querySelector('#setting-backend-url')?.value?.trim() || 'http://localhost:3001';
+      const preferredLanguage = root.querySelector('#setting-language')?.value || 'python';
+      const model = root.querySelector('#setting-model')?.value || (provider === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini');
+
+      const currentSettings = {
+        connectionMode,
+        provider,
+        geminiApiKey,
+        openaiApiKey,
+        backendUrl,
+        preferredLanguage,
+        model
+      };
+
+      this.settings = currentSettings;
+      this.onSaveSettings(currentSettings);
+
+      chrome.runtime.sendMessage({ type: 'TEST_CONNECTION', settings: currentSettings }, (res) => {
+        if (testBtn) {
+          if (res?.success) {
+            testBtn.innerText = '✅ Valid!';
+            this.setBackendStatus('online');
+          } else {
+            testBtn.innerText = '❌ Failed';
+            alert(`Connection test failed: ${res?.error || 'Check key and internet connection'}`);
+            this.setBackendStatus('unconfigured');
+          }
+          setTimeout(() => {
+            if (testBtn) testBtn.innerText = 'Test Connection';
+          }, 3000);
+        }
+      });
     });
 
     // Copy Full Response
@@ -821,12 +990,20 @@ export class BeaconUI {
     // Save Settings
     root.querySelector('#btn-save-settings')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      const backendUrl = root.querySelector('#setting-backend-url')?.value?.trim();
-      const preferredLanguage = root.querySelector('#setting-language')?.value;
-      const model = root.querySelector('#setting-model')?.value;
+      const connectionMode = root.querySelector('#setting-connection-mode')?.value || 'direct';
+      const provider = root.querySelector('#setting-provider')?.value || 'gemini';
+      const geminiApiKey = root.querySelector('#setting-gemini-key')?.value?.trim() || '';
+      const openaiApiKey = root.querySelector('#setting-openai-key')?.value?.trim() || '';
+      const backendUrl = root.querySelector('#setting-backend-url')?.value?.trim() || 'http://localhost:3001';
+      const preferredLanguage = root.querySelector('#setting-language')?.value || 'python';
+      const model = root.querySelector('#setting-model')?.value || (provider === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini');
 
       const newSettings = {
-        backendUrl: backendUrl || 'http://localhost:3001',
+        connectionMode,
+        provider,
+        geminiApiKey,
+        openaiApiKey,
+        backendUrl,
         preferredLanguage,
         model
       };
