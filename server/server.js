@@ -50,6 +50,22 @@ app.use('/api/', apiLimiter);
 // Health & Diagnostic Routes
 // ----------------------------------------------------------------------------
 
+app.get('/', (req, res) => {
+  const provider = getActiveProvider();
+  res.json({
+    status: 'online',
+    service: 'Beacon AI Backend Service',
+    provider,
+    configured: isConfigured(provider),
+    endpoints: {
+      health: '/api/health',
+      models: '/api/models',
+      action: 'POST /api/action',
+      chat: 'POST /api/chat'
+    }
+  });
+});
+
 app.get('/api/health', (req, res) => {
   const provider = getActiveProvider();
   const configured = isConfigured(provider);
@@ -224,4 +240,5 @@ if (isMainModule && process.env.NODE_ENV !== 'test') {
   });
 }
 
+export default app;
 export { app, PORT };
