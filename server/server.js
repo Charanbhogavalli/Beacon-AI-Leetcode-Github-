@@ -33,6 +33,15 @@ app.use(cors({
 // Body parsing with payload size limits
 app.use(express.json({ limit: '2mb' }));
 
+// Restore original path if masked by Vercel serverless rewrites
+app.use((req, res, next) => {
+  const matchedPath = req.headers['x-matched-path'] || req.headers['x-vercel-matched-path'];
+  if (matchedPath && (req.url === '/server.js' || req.url === '/api/index.js' || req.url.endsWith('.js'))) {
+    req.url = matchedPath;
+  }
+  next();
+});
+
 // Rate limiting to protect against abuse
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
