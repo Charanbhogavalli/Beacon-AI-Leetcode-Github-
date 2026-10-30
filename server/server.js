@@ -44,8 +44,6 @@ const apiLimiter = rateLimit({
     error: 'Too many requests. Please slow down and try again in a moment.'
   }
 });
-app.use('/api/', apiLimiter);
-
 // ----------------------------------------------------------------------------
 // Health & Diagnostic Routes
 // ----------------------------------------------------------------------------
@@ -66,7 +64,10 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/api/health', (req, res) => {
+const apiRouter = express.Router();
+apiRouter.use(apiLimiter);
+
+apiRouter.get('/health', (req, res) => {
   const provider = getActiveProvider();
   const configured = isConfigured(provider);
   res.json({
@@ -80,7 +81,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/api/models', (req, res) => {
+apiRouter.get('/models', (req, res) => {
   const provider = getActiveProvider();
   res.json({
     provider,
@@ -93,7 +94,7 @@ app.get('/api/models', (req, res) => {
 // AI Action Execution Route
 // ----------------------------------------------------------------------------
 
-app.post('/api/action', async (req, res) => {
+apiRouter.post('/action', async (req, res) => {
   try {
     const { action, context, options } = req.body;
 
@@ -153,7 +154,7 @@ app.post('/api/action', async (req, res) => {
 // Contextual Chat Route
 // ----------------------------------------------------------------------------
 
-app.post('/api/chat', async (req, res) => {
+apiRouter.post('/chat', async (req, res) => {
   try {
     const { message, context, options, history } = req.body;
 
@@ -209,9 +210,18 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// Mount on /api and root fallback for serverless rewrites
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
+
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ success: false, error: 'Endpoint not found' });
+  res.status(404).json({
+    success: false,
+    error: 'Endpoint not found',
+    requestedPath: req.path,
+    requestedUrl: req.url
+  });
 });
 
 // Global error handler
